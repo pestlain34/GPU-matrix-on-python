@@ -3,15 +3,15 @@ import random
 import time
 
 # Константы
-N_MIN = 58
-N_MAX = 58
+print("введите порядок поиска")
+N = int(input())
 W_FALLBACK = 1000_000_000
 M_BITS_FALLBACK = 14
 MAX_BUCKET_SIZE_FALLBACK = 50
 FALLBACK_TIME_LIMIT_MS = 24 * 60 * 60 * 1000
 PSD_FILTER_ENABLED = False
 PSD_THRESHOLD_ADDITIVE = 2.0
-OUTPUT_FILENAME = "balonin_" + str(N_MIN) + "_fast.js"
+OUTPUT_FILENAME = "balonin_" + str(N) + "_fast.js"
 MAX_CHECKS_PER_BUCKET_PAIR = 8000
 
 fft_cache = {}
@@ -220,35 +220,31 @@ def calculate_hash_n2(paf):
     return sum(1 << (i - 1) if paf[i] < -2 else 0 for i in range(1, min(M_BITS_FALLBACK + 1, len(paf))))
 
 if __name__ == '__main__':
-    print(f"Цель: Найти первую пару для n = {N_MIN} и завершить программу.")
+    print(f"Цель: Найти первую пару для n = {N} и завершить программу.")
     print(f"Результат будет записан в файл: {OUTPUT_FILENAME}")
     print("--------------------------------------------------")
 
     with open(OUTPUT_FILENAME, "w") as writer:
         writer.write(f"// VERSION: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
-        writer.write(f"// Поиск для n={N_MIN}\n")
-        writer.write(f"\nn={N_MIN}; example(n, 0);\n")
+        writer.write(f"// Поиск для n={N}\n")
+        writer.write(f"\nn={N}; example(n, 0);\n")
         writer.write("\nputs(\"a=[\"+a+\"];\"); puts(\"b=[\"+b+\"];\");\n")
         writer.write("H=twocircul(a, b); {{I=H'*H}} putm(I);\n")
         writer.write("plotm(H,'XR',140,20);\n\n")
 
         first_n_processed = False
-        for n_current in range(N_MIN, N_MAX + 1, 4):
-            unique_pairs_for_n = find_all_pairs_dispatcher(n_current)
+        unique_pairs_for_n = find_all_pairs_dispatcher(N)
+        if unique_pairs_for_n:
+            if first_n_processed:
+                writer.write("else ")
+            writer.write(f"    if (n == {N}) {{\n")
+            for k_idx, pair in enumerate(unique_pairs_for_n):
+                writer.write(f"        if (k == {k_idx}) {{\n")
+                write_array_to_file_js(writer, pair.a, "a")
+                write_array_to_file_js(writer, pair.b, "b")
+                writer.write(f"        }}\n")
+            writer.write(f"    }}\n")
+            first_n_processed = True
 
-            if unique_pairs_for_n:
-                if first_n_processed:
-                    writer.write("else ")
-                writer.write(f"    if (n == {n_current}) {{\n")
-
-                for k_idx, pair in enumerate(unique_pairs_for_n):
-                    writer.write(f"        if (k == {k_idx}) {{\n")
-                    write_array_to_file_js(writer, pair.a, "a")
-                    write_array_to_file_js(writer, pair.b, "b")
-                    writer.write(f"        }}\n")
-
-                writer.write(f"    }}\n")
-                first_n_processed = True
-                break
 
     print("Поиск завершен. Результаты записаны в " + OUTPUT_FILENAME)
